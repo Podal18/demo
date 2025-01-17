@@ -1,0 +1,88 @@
+import pymysql
+from openpyxl import load_workbook
+
+# Настройки подключения к БД
+db_host = 'localhost'
+db_user = 'root'
+db_password = 'root'
+db_name = 'prod'
+
+
+def read_excel_data(file_name, sheet_name):
+    wb = load_workbook(filename=file_name, data_only=True)
+    ws = wb[sheet_name]
+
+    rows_data = []
+    col_names = [cell.value.strip() for cell in ws[1]]  # Заголовки таблицы
+
+    for row in ws.iter_rows(min_row=2, values_only=True):  # Пропускаем первую строку
+        rows_data.append(dict(zip(col_names, row)))
+
+    return rows_data
+
+
+# Соединение с базой данных
+try:
+    conn = pymysql.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_name
+    )
+    cur = conn.cursor()
+
+    # Чтение данных из Excel
+    materials = read_excel_data('Material_type_import.xlsx', 'Material_type_import')
+    partner_items = read_excel_data('Partner_products_import.xlsx', 'Partner_products_import')
+    partner_info = read_excel_data('Partners_import.xlsx', 'Partners_import')
+    product_list = read_excel_data('Products_import.xlsx', 'Products_import')
+    product_types = read_excel_data('Product_type_import.xlsx', 'Product_type_import')
+
+    # Запросы на вставку
+    insert_sql = {
+        'MaterialType': """
+            INSERT INTO MaterialType (material_type, defect_rate)
+            VALUES (%s, %s)
+        """,
+        'PartnerProducts': """
+            INSERT INTO PartnerProducts (product_name, partner_name, amount, date_sale)
+            VALUES (%s, %s, %s, %s)
+        """,
+        'Partners': """
+            INSERT INTO Partners (partner_type, partner_name, director_name, email, phone_number, adress, INN, rating)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        'Products': """
+            INSERT INTO Products (product_type, product_name, article, minimal_price_for_partner)
+            VALUES (%s, %s, %s, %s)
+        """,
+        'ProductType': """
+            INSERT INTO ProductType (product_type, coefficient)
+            VALUES (%s, %s)
+        """
+    }
+
+    # Вставка данных в таблицы
+    for tbl_name, data_rows, sql_query in [
+        ('MaterialType', materials, insert_sql['MaterialType']),
+        ('PartnerProducts', partner_items, insert_sql['PartnerProducts']),
+        ('Partners', partner_info, insert_sql['Partners']),
+        ('Products', product_list, insert_sql['Products']),
+        ('ProductType', product_types, insert_sql['ProductType']),
+    ]:
+        for row in data_rows:
+            # Пропускаем строки, если обязательные поля отсутствуют
+            if tbl_name in ['Products', 'ProductType'] and not row.get('Тип продукции'):
+                print(f"Пропущена строка для таблицы {tbl_name}: {row}")
+                continue
+            cur.execute(sql_query, tuple(row.values()))
+
+    conn.commit()
+    print("Данные успешно загружены в базу!")
+
+except pymysql.MySQLError as e:
+    print("Ошибка при работе с базой данных:", e)
+
+finally:
+    if conn:
+        conn.close()
