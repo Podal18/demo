@@ -1,0 +1,43 @@
+CREATE TABLE IF NOT EXISTS Materials (
+    id INT AUTO_INCREMENT PRIMARY KEY,     
+    type_name VARCHAR(255) NOT NULL,       
+    defect_rate FLOAT NOT NULL              
+);
+
+
+CREATE TABLE IF NOT EXISTS PartnerGoods (
+    id INT AUTO_INCREMENT PRIMARY KEY,      
+    product_name VARCHAR(255) NOT NULL,     
+    partner_name VARCHAR(255) NOT NULL,     
+    amount INT NOT NULL,                    
+    sale_date DATE NOT NULL                 
+);
+х
+CREATE TABLE IF NOT EXISTS Companies (
+    id INT AUTO_INCREMENT PRIMARY KEY,      
+    partner_type VARCHAR(50) NOT NULL,      
+    partner_name VARCHAR(255) NOT NULL,     
+    director_name VARCHAR(255) NOT NULL,    
+    email VARCHAR(255) NOT NULL,            
+    phone_number VARCHAR(255) NOT NULL,     
+    address VARCHAR(255) NOT NULL,         
+    inn VARCHAR(255) NOT NULL,              
+    rating INT NOT NULL                    
+);
+
+
+CREATE TABLE IF NOT EXISTS Goods (
+    id INT AUTO_INCREMENT PRIMARY KEY,     
+    category VARCHAR(255) NOT NULL,        
+    product_name VARCHAR(255) NOT NULL,      
+    article_code VARCHAR(255) NOT NULL,     
+    min_price_for_partner FLOAT NOT NULL    
+);
+
+
+CREATE TABLE IF NOT EXISTS Categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,   
+    category_name VARCHAR(255) NOT NULL,   
+    price_coefficient FLOAT NOT NULL         
+);
+
