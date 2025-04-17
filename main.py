@@ -4,12 +4,11 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox
 from addW import Ui_AddW
 from welcW import Ui_WelcomeW
+from auth import Ui_auth_u
 
-
-# Функция для подключения и выполнения запроса
 def execute_query(query, params=()):
     try:
-        connection = pymysql.connect(host='localhost', user='root', password='', database='your_db', port=3307)
+        connection = pymysql.connect(host='localhost', user='root', password='', database='podik', port=3307)
         cursor = connection.cursor()
         cursor.execute(query, params)
         connection.commit()
@@ -17,6 +16,46 @@ def execute_query(query, params=()):
     except Exception as e:
         QMessageBox.critical(None, "Ошибка", f"Ошибка базы данных: {str(e)}")
 
+
+class authwin(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_auth_u()
+        self.ui.setupUi(self)
+        self.ui.pushButton.clicked.connect(self.avtor)
+
+    def avtor(self):
+        log = self.ui.login_edit.text()
+        pas = self.ui.login_edit_3.text()
+
+        if not log or not pas:
+            QMessageBox.warning(self, "Ошибка", "Введите логин или пароль")
+            return
+
+        try:
+            con = pymysql.connect(host="localhost", user="root", password="", database="podik", port=3307)
+            cursor = con.cursor()
+            sql = """select users.id, users.login, roles.name_role 
+            from users 
+            join roles on users.role_id = roles.id_role 
+            where users.login=%s and users.password=%s
+            """
+            cursor.execute(sql, (log, pas))
+            user = cursor.fetchone()
+            con.close()
+
+            if user:
+                role = user[2].lower()
+                if role == "admin":
+                    self.main_win = MainWindow()
+                else:
+                    self.main_win = AddWindow(None)  # передаём None, т.к. нет главного окна у обычного user
+                self.main_win.show()
+                self.close()
+            else:
+                QMessageBox.warning(self, "Ошибка", "Неверные логин или пароль")
+        except Exception as e:
+            print(f"{str(e)}")
 
 class AddWindow(QWidget):
     def __init__(self, main_window):
@@ -28,14 +67,13 @@ class AddWindow(QWidget):
         self.ui.last_b.clicked.connect(self.close)
 
     def add_data(self):
-        # Получаем данные из полей
         name, lastname, age = self.ui.name_Edit.text(), self.ui.lastname_Edit.text(), self.ui.age_Edit.text()
 
         if name and lastname and age:
             if not age.isdigit():  # Проверка на возраст
                 QMessageBox.warning(self, "Ошибка", "Возраст должен быть числом!")
                 return
-            # Добавляем в базу
+
             execute_query("INSERT INTO people (first_name, last_name, age) VALUES (%s, %s, %s)", (name, lastname, age))
             self.main_window.load_data()
             self.close()
@@ -57,7 +95,7 @@ class MainWindow(QWidget):
 
     def load_data(self):
         try:
-            connection = pymysql.connect(host='localhost', user='root', password='', database='your_db', port=3307)
+            connection = pymysql.connect(host='localhost', user='root', password='', database='podik', port=3307)
             cursor = connection.cursor()
             cursor.execute("SELECT id, first_name, last_name, age FROM people")
             records = cursor.fetchall()
@@ -70,7 +108,7 @@ class MainWindow(QWidget):
                 self.ui.tableWidget.setItem(row_index, 0, QtWidgets.QTableWidgetItem(fname))
                 self.ui.tableWidget.setItem(row_index, 1, QtWidgets.QTableWidgetItem(lname))
                 self.ui.tableWidget.setItem(row_index, 2, QtWidgets.QTableWidgetItem(str(age)))
-                # Храним ID в заголовке строки (невидимо для пользователя)
+
                 self.ui.tableWidget.setVerticalHeaderItem(row_index, QtWidgets.QTableWidgetItem())
                 self.ui.tableWidget.verticalHeaderItem(row_index).setData(QtCore.Qt.ItemDataRole.UserRole, id_val)
 
@@ -112,8 +150,9 @@ class MainWindow(QWidget):
             QMessageBox.warning(self, "Внимание", "Выберите строку для изменения.")
 
 
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = authwin()
     window.show()
     sys.exit(app.exec())
